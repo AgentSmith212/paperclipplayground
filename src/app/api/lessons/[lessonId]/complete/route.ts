@@ -180,6 +180,24 @@ export async function POST(
   // Re-read to get accurate final xpTotal after any achievement bonuses
   const finalUser = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
 
+  // Track analytics
+  await prisma.analyticsEvent.create({
+    data: {
+      userId,
+      event: "lesson_completed",
+      properties: {
+        lessonId,
+        lessonTitle: lesson.title,
+        moduleId: lesson.moduleId,
+        lessonType: lesson.type,
+        score,
+        xpAwarded: xpAmount,
+        isFirstCompletion,
+        leveledUp,
+      },
+    },
+  }).catch(() => {});
+
   return Response.json({
     xpAwarded: xpAmount,
     isFirstCompletion,

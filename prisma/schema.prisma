@@ -23,6 +23,11 @@ model User {
   streakDays   Int       @default(0)
   lastActiveAt DateTime?
 
+  // Onboarding
+  onboardingCompleted Boolean @default(false)
+  skillLevel          String? // beginner | intermediate | advanced
+  djGoal              String? // hobbyist | performer | producer | educator
+
   // Relations
   accounts     Account[]
   sessions     Session[]
@@ -178,4 +183,18 @@ model UserAchievement {
   achievement Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
 
   @@unique([userId, achievementId])
+}
+
+// ——— Analytics ———
+
+model AnalyticsEvent {
+  id         String   @id @default(cuid())
+  userId     String?
+  event      String
+  properties Json?
+  sessionId  String?
+  createdAt  DateTime @default(now())
+
+  @@index([event, createdAt])
+  @@index([userId, createdAt])
 }

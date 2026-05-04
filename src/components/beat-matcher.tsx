@@ -66,6 +66,7 @@ export default function BeatMatcher({
   const [countdown, setCountdown] = useState(3);
   const [lastTapFeedback, setLastTapFeedback] = useState<string | null>(null);
   const [pulseKey, setPulseKey] = useState(0);
+  const [audioError, setAudioError] = useState<string | null>(null);
 
   const audioCtxRef = useRef<AudioContext | null>(null);
   const beatTimesRef = useRef<number[]>([]);
@@ -105,7 +106,19 @@ export default function BeatMatcher({
   );
 
   const startExercise = useCallback(() => {
-    const ctx = new AudioContext();
+    if (typeof AudioContext === "undefined" && typeof (window as { webkitAudioContext?: unknown }).webkitAudioContext === "undefined") {
+      setAudioError("Your browser does not support the Web Audio API. Try Chrome or Firefox.");
+      return;
+    }
+    let ctx: AudioContext;
+    try {
+      const ACtx = window.AudioContext ?? (window as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      ctx = new ACtx!();
+    } catch {
+      setAudioError("Audio could not be initialised. Please allow audio access and try again.");
+      return;
+    }
+    setAudioError(null);
     audioCtxRef.current = ctx;
     tapsRef.current = [];
     setTaps([]);
@@ -243,6 +256,16 @@ export default function BeatMatcher({
   }, []);
 
   const progressPct = totalBeats > 0 ? (currentBeat / totalBeats) * 100 : 0;
+
+  if (audioError) {
+    return (
+      <div className="flex flex-col items-center gap-4 py-8 text-center">
+        <div className="text-4xl">🔇</div>
+        <p className="font-semibold">Audio unavailable</p>
+        <p className="text-sm max-w-xs" style={{ color: "var(--foreground-muted)" }}>{audioError}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col items-center gap-6 select-none">

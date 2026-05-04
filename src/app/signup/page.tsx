@@ -31,9 +31,9 @@ export default function SignupPage() {
       return;
     }
 
-    // Auto sign-in after signup
+    // Auto sign-in after signup, then onboarding
     await signIn("credentials", { email, password, redirect: false });
-    router.push("/dashboard");
+    router.push("/onboarding");
   }
 
   return (
@@ -51,7 +51,7 @@ export default function SignupPage() {
         </div>
 
         <button
-          onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
+          onClick={() => signIn("google", { callbackUrl: "/onboarding" })}
           className="w-full flex items-center justify-center gap-3 py-3 rounded-xl font-medium mb-6 transition-colors hover:opacity-90"
           style={{ background: "var(--surface-elevated)", border: "1px solid var(--border)" }}
         >
