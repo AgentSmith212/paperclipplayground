@@ -147,39 +147,34 @@ async function main() {
     },
   });
 
-  // Seed achievements
-  await prisma.achievement.upsert({
-    where: { slug: "first-beat" },
-    update: {},
-    create: {
-      slug: "first-beat",
-      title: "First Beat",
-      description: "Completed your first beat-matching exercise.",
-      xpReward: 25,
-    },
-  });
+  // ——— Achievements ———
+  const achievements = [
+    // Completion milestones
+    { slug: "first-beat",   title: "First Beat",      description: "Completed your first lesson.",                  xpReward: 25  },
+    { slug: "lessons-5",    title: "On A Roll",        description: "Completed 5 lessons.",                          xpReward: 50  },
+    { slug: "lessons-10",   title: "Dedicated DJ",     description: "Completed 10 lessons.",                         xpReward: 100 },
+    { slug: "lessons-25",   title: "Grind Mode",       description: "Completed 25 lessons.",                         xpReward: 250 },
+    // Module mastery
+    { slug: "module-complete", title: "Module Master", description: "Completed every lesson in a module.",           xpReward: 200 },
+    // Score-based
+    { slug: "perfect-timing",  title: "Perfect Timing", description: "Scored 90%+ on an exercise.",                  xpReward: 100 },
+    { slug: "flawless",        title: "Flawless",        description: "Achieved a perfect 100% score.",               xpReward: 150 },
+    // Streak milestones
+    { slug: "streak-3",    title: "Hat Trick",         description: "Practiced 3 days in a row.",                   xpReward: 75  },
+    { slug: "streak-7",    title: "Week Warrior",      description: "Maintained a 7-day streak.",                   xpReward: 150 },
+    { slug: "streak-30",   title: "Dedicated Mixer",   description: "Kept a 30-day streak alive.",                  xpReward: 500 },
+    // Level milestones
+    { slug: "level-5",     title: "Rising Star",       description: "Reached Level 5.",                             xpReward: 100 },
+    { slug: "level-10",    title: "Pro DJ",            description: "Reached Level 10.",                            xpReward: 250 },
+  ];
 
-  await prisma.achievement.upsert({
-    where: { slug: "perfect-timing" },
-    update: {},
-    create: {
-      slug: "perfect-timing",
-      title: "Perfect Timing",
-      description: "Scored 90%+ on a beat-matching exercise.",
-      xpReward: 100,
-    },
-  });
-
-  await prisma.achievement.upsert({
-    where: { slug: "module-complete" },
-    update: {},
-    create: {
-      slug: "module-complete",
-      title: "Module Master",
-      description: "Completed all lessons in a module.",
-      xpReward: 200,
-    },
-  });
+  for (const a of achievements) {
+    await prisma.achievement.upsert({
+      where: { slug: a.slug },
+      update: { title: a.title, description: a.description, xpReward: a.xpReward },
+      create: a,
+    });
+  }
 
   console.log("✅ Seed complete");
 }

@@ -5,8 +5,11 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 
-function xpToNextLevel(level: number) {
-  return level * 500;
+const XP_PER_LEVEL = 500;
+
+/** XP accumulated within the current level (resets each level). */
+function xpWithinLevel(xpTotal: number): number {
+  return xpTotal % XP_PER_LEVEL;
 }
 
 export default async function DashboardPage() {
@@ -23,8 +26,8 @@ export default async function DashboardPage() {
 
   if (!user) redirect("/login");
 
-  const xpForNext = xpToNextLevel(user.level);
-  const xpProgress = Math.min((user.xpTotal % xpForNext) / xpForNext, 1);
+  const xpInLevel = xpWithinLevel(user.xpTotal);
+  const xpProgress = Math.min(xpInLevel / XP_PER_LEVEL, 1);
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-10">
@@ -69,7 +72,7 @@ export default async function DashboardPage() {
         <div className="flex items-center justify-between mb-3">
           <span className="text-sm font-semibold">Level {user.level} → {user.level + 1}</span>
           <span className="text-sm" style={{ color: "var(--foreground-muted)" }}>
-            {user.xpTotal % xpForNext} / {xpForNext} XP
+            {xpInLevel} / {XP_PER_LEVEL} XP
           </span>
         </div>
         <div className="h-3 rounded-full overflow-hidden" style={{ background: "var(--surface-elevated)" }}>
@@ -84,7 +87,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Quick actions */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Link
           href="/learn"
           className="p-6 rounded-2xl transition-all hover:opacity-90 flex flex-col gap-2"
@@ -103,6 +106,18 @@ export default async function DashboardPage() {
           <span className="text-2xl">🎛️</span>
           <span className="font-bold text-lg">Practice</span>
           <span className="text-sm" style={{ color: "var(--foreground-muted)" }}>Beat matching exercises</span>
+        </Link>
+
+        <Link
+          href="/achievements"
+          className="p-6 rounded-2xl transition-all hover:opacity-90 flex flex-col gap-2"
+          style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+        >
+          <span className="text-2xl">🏅</span>
+          <span className="font-bold text-lg">Achievements</span>
+          <span className="text-sm" style={{ color: "var(--foreground-muted)" }}>
+            {user.achievements.length} badge{user.achievements.length !== 1 ? "s" : ""} earned
+          </span>
         </Link>
 
         <Link

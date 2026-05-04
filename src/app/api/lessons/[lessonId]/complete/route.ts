@@ -6,6 +6,51 @@ function computeLevel(xpTotal: number): number {
   return Math.floor(xpTotal / 500) + 1;
 }
 
+/** Returns the updated streak count given the user's last active date. */
+function computeStreak(lastActiveAt: Date | null, currentStreak: number): number {
+  if (!lastActiveAt) return 1;
+
+  const now = new Date();
+  const todayUTC = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  const lastUTC = Date.UTC(
+    lastActiveAt.getUTCFullYear(),
+    lastActiveAt.getUTCMonth(),
+    lastActiveAt.getUTCDate()
+  );
+  const daysDiff = (todayUTC - lastUTC) / 86_400_000;
+
+  if (daysDiff === 0) return currentStreak; // already active today
+  if (daysDiff === 1) return currentStreak + 1; // consecutive day
+  return 1; // streak broken
+}
+
+async function awardAchievement(userId: string, slug: string): Promise<void> {
+  const achievement = await prisma.achievement.findUnique({ where: { slug } });
+  if (!achievement) return;
+
+  const awarded = await prisma.userAchievement
+    .create({ data: { userId, achievementId: achievement.id } })
+    .catch(() => null);
+
+  if (awarded) {
+    // Award the achievement's XP bonus
+    if (achievement.xpReward > 0) {
+      await prisma.xpEvent.create({
+        data: {
+          userId,
+          amount: achievement.xpReward,
+          reason: `Achievement unlocked: ${achievement.title}`,
+          sourceId: achievement.id,
+        },
+      });
+      await prisma.user.update({
+        where: { id: userId },
+        data: { xpTotal: { increment: achievement.xpReward } },
+      });
+    }
+  }
+}
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ lessonId: string }> }
@@ -19,7 +64,10 @@ export async function POST(
   const body = await request.json().catch(() => ({}));
   const score: number | null = typeof body.score === "number" ? body.score : null;
 
-  const lesson = await prisma.lesson.findUnique({ where: { id: lessonId } });
+  const lesson = await prisma.lesson.findUnique({
+    where: { id: lessonId },
+    include: { module: { include: { lessons: { where: { isPublished: true } } } } },
+  });
   if (!lesson) {
     return Response.json({ error: "Lesson not found" }, { status: 404 });
   }
@@ -31,7 +79,7 @@ export async function POST(
   const isFirstCompletion = !existing?.completedAt;
   const xpAmount = isFirstCompletion ? lesson.xpReward : Math.round(lesson.xpReward * 0.1);
 
-  const progress = await prisma.userProgress.upsert({
+  await prisma.userProgress.upsert({
     where: { userId_lessonId: { userId: session.user.id, lessonId } },
     create: {
       userId: session.user.id,
@@ -42,9 +90,10 @@ export async function POST(
     },
     update: {
       completedAt: new Date(),
-      score: score !== null && (existing?.score === null || score > (existing?.score ?? 0))
-        ? score
-        : undefined,
+      score:
+        score !== null && (existing?.score === null || score > (existing?.score ?? 0))
+          ? score
+          : undefined,
       attempts: { increment: 1 },
     },
   });
@@ -53,63 +102,90 @@ export async function POST(
     data: {
       userId: session.user.id,
       amount: xpAmount,
-      reason: isFirstCompletion ? `Completed lesson: ${lesson.title}` : `Replayed lesson: ${lesson.title}`,
+      reason: isFirstCompletion
+        ? `Completed lesson: ${lesson.title}`
+        : `Replayed lesson: ${lesson.title}`,
       sourceId: lessonId,
     },
   });
+
+  // Fetch current user state for streak + level calculations
+  const userBefore = await prisma.user.findUniqueOrThrow({ where: { id: session.user.id } });
+  const newStreak = computeStreak(userBefore.lastActiveAt, userBefore.streakDays);
 
   const user = await prisma.user.update({
     where: { id: session.user.id },
     data: {
       xpTotal: { increment: xpAmount },
       lastActiveAt: new Date(),
+      streakDays: newStreak,
     },
   });
 
   const newLevel = computeLevel(user.xpTotal);
+  let leveledUp = false;
   if (newLevel > user.level) {
+    leveledUp = true;
     await prisma.user.update({
       where: { id: session.user.id },
       data: { level: newLevel },
     });
   }
 
-  // Award "first-beat" achievement on first-ever lesson completion
+  // ——— Achievement checks ———
+
+  const userId = session.user.id;
+
+  // First lesson ever
   if (isFirstCompletion) {
     const totalCompleted = await prisma.userProgress.count({
-      where: { userId: session.user.id, completedAt: { not: null } },
+      where: { userId, completedAt: { not: null } },
     });
-    if (totalCompleted === 1) {
-      const achievement = await prisma.achievement.findUnique({
-        where: { slug: "first-beat" },
-      });
-      if (achievement) {
-        await prisma.userAchievement
-          .create({
-            data: { userId: session.user.id, achievementId: achievement.id },
-          })
-          .catch(() => null); // ignore duplicate
-      }
+    if (totalCompleted === 1) await awardAchievement(userId, "first-beat");
+    if (totalCompleted === 5) await awardAchievement(userId, "lessons-5");
+    if (totalCompleted === 10) await awardAchievement(userId, "lessons-10");
+    if (totalCompleted === 25) await awardAchievement(userId, "lessons-25");
+
+    // Module completion: check if all published lessons in the module are now done
+    const moduleLessonIds = lesson.module.lessons.map((l) => l.id);
+    const completedInModule = await prisma.userProgress.count({
+      where: {
+        userId,
+        lessonId: { in: moduleLessonIds },
+        completedAt: { not: null },
+      },
+    });
+    if (completedInModule === moduleLessonIds.length) {
+      await awardAchievement(userId, "module-complete");
     }
   }
 
-  // Award "perfect-timing" achievement on score >= 90
+  // Score-based achievements
   if (score !== null && score >= 90) {
-    const achievement = await prisma.achievement.findUnique({
-      where: { slug: "perfect-timing" },
-    });
-    if (achievement) {
-      await prisma.userAchievement
-        .create({ data: { userId: session.user.id, achievementId: achievement.id } })
-        .catch(() => null);
-    }
+    await awardAchievement(userId, "perfect-timing");
   }
+  if (score !== null && score === 100) {
+    await awardAchievement(userId, "flawless");
+  }
+
+  // Streak achievements
+  if (newStreak >= 3) await awardAchievement(userId, "streak-3");
+  if (newStreak >= 7) await awardAchievement(userId, "streak-7");
+  if (newStreak >= 30) await awardAchievement(userId, "streak-30");
+
+  // Level achievements
+  if (newLevel >= 5) await awardAchievement(userId, "level-5");
+  if (newLevel >= 10) await awardAchievement(userId, "level-10");
+
+  // Re-read to get accurate final xpTotal after any achievement bonuses
+  const finalUser = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
 
   return Response.json({
     xpAwarded: xpAmount,
     isFirstCompletion,
-    progress,
-    newXpTotal: user.xpTotal,
+    newXpTotal: finalUser.xpTotal,
     newLevel: Math.max(newLevel, user.level),
+    newStreak,
+    leveledUp,
   });
 }
