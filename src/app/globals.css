@@ -1,0 +1,49 @@
+@import "tailwindcss";
+
+/* DJ Platform Design Tokens */
+:root {
+  /* Brand */
+  --brand-primary: #7c3aed;    /* violet-700 */
+  --brand-accent: #f59e0b;     /* amber-500 — XP/energy */
+  --brand-success: #10b981;    /* emerald-500 */
+
+  /* Surface */
+  --background: #0f0f0f;
+  --surface: #1a1a2e;
+  --surface-elevated: #242444;
+  --border: rgba(255, 255, 255, 0.08);
+
+  /* Text */
+  --foreground: #f0f0f0;
+  --foreground-muted: #9ca3af;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-brand: var(--brand-primary);
+  --color-accent: var(--brand-accent);
+  --color-surface: var(--surface);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+  min-height: 100vh;
+}
+
+/* Utility: glowing border for interactive elements */
+.glow-violet {
+  box-shadow: 0 0 20px rgba(124, 58, 237, 0.4);
+}
+
+.glow-amber {
+  box-shadow: 0 0 20px rgba(245, 158, 11, 0.4);
+}
