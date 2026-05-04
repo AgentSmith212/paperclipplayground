@@ -6,12 +6,13 @@ import BeatMatcher from "@/components/beat-matcher";
 interface Props {
   lessonId: string;
   bpm: number;
+  totalBeats?: number;
   previousScore: number | null;
 }
 
 type SaveState = "idle" | "saving" | "saved" | "error";
 
-export default function LessonExercise({ lessonId, bpm, previousScore }: Props) {
+export default function LessonExercise({ lessonId, bpm, totalBeats = 16, previousScore }: Props) {
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [xpAwarded, setXpAwarded] = useState<number | null>(null);
   const [isFirstCompletion, setIsFirstCompletion] = useState(false);
@@ -38,7 +39,7 @@ export default function LessonExercise({ lessonId, bpm, previousScore }: Props) 
 
   return (
     <div className="flex flex-col items-center gap-6">
-      <BeatMatcher bpm={bpm} totalBeats={16} onComplete={handleComplete} />
+      <BeatMatcher bpm={bpm} totalBeats={totalBeats} onComplete={handleComplete} />
 
       {/* Save feedback */}
       {saveState === "saving" && (

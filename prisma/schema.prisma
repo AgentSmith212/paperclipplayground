@@ -112,6 +112,7 @@ model Lesson {
   order       Int
   xpReward    Int             @default(50)
   contentUrl  String?
+  content     Json?
   durationSec Int?
   isPublished Boolean         @default(false)
   createdAt   DateTime        @default(now())
