@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Navbar } from "@/components/navbar";
+import { OfflineBanner } from "@/components/offline-banner";
 import { Providers } from "@/components/providers";
 import { ErrorBoundary } from "@/components/error-boundary";
 
@@ -33,6 +34,7 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col">
         <Providers>
           <Navbar />
+          <OfflineBanner />
           <main className="flex-1">
             <ErrorBoundary>{children}</ErrorBoundary>
           </main>
