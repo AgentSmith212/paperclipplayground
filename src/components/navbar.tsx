@@ -39,10 +39,12 @@ export function Navbar() {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  // Close menu on route change
-  useEffect(() => {
+  // Close menu on route change (render-phase reset avoids cascading effect)
+  const prevPathnameRef = useRef(pathname);
+  if (prevPathnameRef.current !== pathname) {
+    prevPathnameRef.current = pathname;
     setMenuOpen(false);
-  }, [pathname]);
+  }
 
   return (
     <nav

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import BeatMatcher from "@/components/beat-matcher";
 
 const BPM_PRESETS = [
@@ -114,9 +115,9 @@ export default function PracticePage() {
 
       <p className="text-center mt-6 text-sm" style={{ color: "var(--foreground-muted)" }}>
         Want XP?{" "}
-        <a href="/learn" className="underline" style={{ color: "var(--brand-primary)" }}>
+        <Link href="/learn" className="underline" style={{ color: "var(--brand-primary)" }}>
           Go to the curriculum
-        </a>
+        </Link>
       </p>
     </div>
   );

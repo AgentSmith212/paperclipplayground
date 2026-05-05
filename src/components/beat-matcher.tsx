@@ -185,7 +185,7 @@ export default function BeatMatcher({
     }
 
     setTimeout(tick, 50);
-  }, [bpm, beatInterval, totalBeats, finishExercise]);
+  }, [beatInterval, totalBeats, finishExercise]);
 
   const handleTap = useCallback(() => {
     if (phaseRef.current !== "playing") return;
